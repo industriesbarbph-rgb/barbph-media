@@ -8,20 +8,28 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - name: Check consultation image
+      - name: Check live Programs media response
         shell: bash
         run: |
           set -euxo pipefail
-          URL='https://raw.githubusercontent.com/industriesbarbph-rgb/barbph-media/main/ChatGPT%20Image%20Aug%2031,%202026,%2004_05_16%20PM.png'
-          curl -sSIL "$URL"
-          curl -fsSL "$URL" -o /tmp/consultation.png
+          STATIC='https://raw.githubusercontent.com/industriesbarbph-rgb/barbph-media/main/ChatGPT%20Image%20Aug%2031,%202026,%2004_05_16%20PM.png'
+          echo 'STATIC IMAGE:'
+          curl -sSIL "$STATIC"
+          curl -fsSL "$STATIC" -o /tmp/consultation.png
           wc -c /tmp/consultation.png
           file /tmp/consultation.png
+
+          echo 'LIVE CATALOG FEED:'
+          curl -fsSL 'https://barbphproducts.netlify.app/.netlify/functions/catalog-feed?type=programs' -o /tmp/feed.json
+          cat /tmp/feed.json
           python - <<'PY'
-          from PIL import Image
-          p='/tmp/consultation.png'
-          im=Image.open(p)
-          print('format=', im.format, 'size=', im.size, 'mode=', im.mode)
-          im.verify()
-          print('verify=ok')
+          import json, subprocess
+          data=json.load(open('/tmp/feed.json'))
+          item=next(x for x in data['items'] if x['name']=='Consultation')
+          print('consultation_photo_url=',repr(item.get('photo_url')))
+          subprocess.run(['curl','-sSIL',item['photo_url']],check=True)
           PY
+
+          echo 'LIVE PROGRAMS PAGE:'
+          curl -fsSL 'https://barbphproducts.netlify.app/programs' -o /tmp/programs.html
+          grep -n -A4 -B2 'alt="Consultation"' /tmp/programs.html || true
