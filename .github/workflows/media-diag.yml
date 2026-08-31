@@ -1,0 +1,27 @@
+name: Media diagnostic
+on:
+  push:
+    branches: [media-diag-2026-08-31]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check consultation image
+        shell: bash
+        run: |
+          set -euxo pipefail
+          URL='https://raw.githubusercontent.com/industriesbarbph-rgb/barbph-media/main/ChatGPT%20Image%20Aug%2031,%202026,%2004_05_16%20PM.png'
+          curl -sSIL "$URL"
+          curl -fsSL "$URL" -o /tmp/consultation.png
+          wc -c /tmp/consultation.png
+          file /tmp/consultation.png
+          python - <<'PY'
+          from PIL import Image
+          p='/tmp/consultation.png'
+          im=Image.open(p)
+          print('format=', im.format, 'size=', im.size, 'mode=', im.mode)
+          im.verify()
+          print('verify=ok')
+          PY
