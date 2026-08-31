@@ -8,28 +8,24 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - name: Check live Programs media response
+      - name: Inspect browser compatibility
         shell: bash
         run: |
           set -euxo pipefail
-          STATIC='https://raw.githubusercontent.com/industriesbarbph-rgb/barbph-media/main/ChatGPT%20Image%20Aug%2031,%202026,%2004_05_16%20PM.png'
-          echo 'STATIC IMAGE:'
-          curl -sSIL "$STATIC"
-          curl -fsSL "$STATIC" -o /tmp/consultation.png
-          wc -c /tmp/consultation.png
+          URL='https://raw.githubusercontent.com/industriesbarbph-rgb/barbph-media/main/ChatGPT%20Image%20Aug%2031,%202026,%2004_05_16%20PM.png'
+          curl -fsSL "$URL" -o /tmp/consultation.png
+          echo 'FILE:'
           file /tmp/consultation.png
-
-          echo 'LIVE CATALOG FEED:'
-          curl -fsSL 'https://barbphproducts.netlify.app/.netlify/functions/catalog-feed?type=programs' -o /tmp/feed.json
-          cat /tmp/feed.json
-          python - <<'PY'
-          import json, subprocess
-          data=json.load(open('/tmp/feed.json'))
-          item=next(x for x in data['items'] if x['name']=='Consultation')
-          print('consultation_photo_url=',repr(item.get('photo_url')))
-          subprocess.run(['curl','-sSIL',item['photo_url']],check=True)
-          PY
-
-          echo 'LIVE PROGRAMS PAGE:'
-          curl -fsSL 'https://barbphproducts.netlify.app/programs' -o /tmp/programs.html
-          grep -n -A4 -B2 'alt="Consultation"' /tmp/programs.html || true
+          echo 'TOOLS:'
+          command -v identify || true
+          command -v convert || true
+          command -v chromium || true
+          command -v chromium-browser || true
+          command -v google-chrome || true
+          command -v firefox || true
+          echo 'IDENTIFY:'
+          identify -verbose /tmp/consultation.png 2>&1 | head -120 || true
+          echo 'PAGE HEADERS:'
+          curl -sSI 'https://barbphproducts.netlify.app/programs'
+          echo 'RAW ALT ENCODED:'
+          curl -sSIL 'https://raw.githubusercontent.com/industriesbarbph-rgb/barbph-media/main/ChatGPT%20Image%20Aug%2031%2C%202026%2C%2004_05_16%20PM.png' | head -40
