@@ -3,28 +3,28 @@ on:
   push:
     branches: [media-diag-2026-08-31]
 permissions:
-  contents: write
+  contents: read
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out media main
-        uses: actions/checkout@v4
-        with:
-          ref: main
-      - name: Create stable consultation alias
+      - name: Verify live Consultation media alias
         shell: bash
         run: |
           set -euxo pipefail
-          URL='https://raw.githubusercontent.com/industriesbarbph-rgb/barbph-media/main/ChatGPT%20Image%20Aug%2031,%202026,%2004_05_16%20PM.png'
-          curl -fsSL "$URL" -o consultation.png
-          file consultation.png
-          git config user.name "barbph-media-fix"
-          git config user.email "actions@github.com"
-          git add consultation.png
-          if git diff --cached --quiet; then
-            echo "Alias already present."
-          else
-            git commit -m "Add stable Consultation media alias"
-            git push origin HEAD:main
-          fi
+          ALIAS='https://raw.githubusercontent.com/industriesbarbph-rgb/barbph-media/main/consultation.png'
+          curl -sSIL "$ALIAS" | head -30
+          curl -fsSL 'https://barbphproducts.netlify.app/.netlify/functions/catalog-feed?type=programs' -o /tmp/feed.json
+          cat /tmp/feed.json
+          python - <<'PY'
+          import json
+          data=json.load(open('/tmp/feed.json'))
+          item=next(x for x in data['items'] if x['name']=='Consultation')
+          print('consultation_photo_url=', item.get('photo_url'))
+          assert item.get('photo_url') == 'https://raw.githubusercontent.com/industriesbarbph-rgb/barbph-media/main/consultation.png'
+          PY
+          cat >/tmp/test.html <<'HTML'
+          <!doctype html><div id="out">waiting</div><img id="i" src="https://raw.githubusercontent.com/industriesbarbph-rgb/barbph-media/main/consultation.png"><script>setTimeout(()=>{const i=document.getElementById('i');document.getElementById('out').textContent=`complete=${i.complete} nw=${i.naturalWidth} nh=${i.naturalHeight}`},1500)</script>
+          HTML
+          chromium --headless=new --no-sandbox --disable-gpu --virtual-time-budget=2500 --dump-dom file:///tmp/test.html 2>&1 | tee /tmp/chromium.txt
+          grep -o 'complete=true nw=[0-9]* nh=[0-9]*' /tmp/chromium.txt
