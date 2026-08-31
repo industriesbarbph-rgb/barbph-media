@@ -8,24 +8,28 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - name: Inspect browser compatibility
+      - name: Browser decode test
         shell: bash
         run: |
           set -euxo pipefail
-          URL='https://raw.githubusercontent.com/industriesbarbph-rgb/barbph-media/main/ChatGPT%20Image%20Aug%2031,%202026,%2004_05_16%20PM.png'
-          curl -fsSL "$URL" -o /tmp/consultation.png
-          echo 'FILE:'
-          file /tmp/consultation.png
-          echo 'TOOLS:'
-          command -v identify || true
-          command -v convert || true
-          command -v chromium || true
-          command -v chromium-browser || true
-          command -v google-chrome || true
-          command -v firefox || true
-          echo 'IDENTIFY:'
-          identify -verbose /tmp/consultation.png 2>&1 | head -120 || true
-          echo 'PAGE HEADERS:'
-          curl -sSI 'https://barbphproducts.netlify.app/programs'
-          echo 'RAW ALT ENCODED:'
-          curl -sSIL 'https://raw.githubusercontent.com/industriesbarbph-rgb/barbph-media/main/ChatGPT%20Image%20Aug%2031%2C%202026%2C%2004_05_16%20PM.png' | head -40
+          BAD='https://raw.githubusercontent.com/industriesbarbph-rgb/barbph-media/main/ChatGPT%20Image%20Aug%2031,%202026,%2004_05_16%20PM.png'
+          GOOD='https://raw.githubusercontent.com/industriesbarbph-rgb/barbph-media/main/486363695_632371549428293_4964588722830912259_n.jpg'
+          cat > /tmp/test.html <<'HTML'
+          <!doctype html><meta charset="utf-8">
+          <div id="out">waiting</div>
+          <img id="bad" src="https://raw.githubusercontent.com/industriesbarbph-rgb/barbph-media/main/ChatGPT%20Image%20Aug%2031,%202026,%2004_05_16%20PM.png">
+          <img id="good" src="https://raw.githubusercontent.com/industriesbarbph-rgb/barbph-media/main/486363695_632371549428293_4964588722830912259_n.jpg">
+          <script>
+          setTimeout(()=>{
+            const b=document.getElementById('bad'), g=document.getElementById('good');
+            document.getElementById('out').textContent = `bad complete=${b.complete} nw=${b.naturalWidth} nh=${b.naturalHeight}; good complete=${g.complete} nw=${g.naturalWidth} nh=${g.naturalHeight}`;
+          },1800);
+          </script>
+          HTML
+          chromium --headless=new --no-sandbox --disable-gpu --virtual-time-budget=3000 --dump-dom file:///tmp/test.html 2>&1 | tee /tmp/chromium.txt
+          echo 'RESULT:'
+          grep -o 'bad complete[^<]*' /tmp/chromium.txt || true
+
+          echo 'LIVE PAGE SCREENSHOT TEST:'
+          chromium --headless=new --no-sandbox --disable-gpu --window-size=1800,1000 --virtual-time-budget=5000 --screenshot=/tmp/programs.png 'https://barbphproducts.netlify.app/programs' 2>&1 | tail -40 || true
+          file /tmp/programs.png || true
